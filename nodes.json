@@ -1,0 +1,24 @@
+{
+    "Deal Damage": {
+        "inputs": [
+            { "name": "Minion", "type": "MINION" },
+            { "name": "Damage", "type": "INTEGER" }
+        ],
+        "outputs": [{ "name": "Call", "type": "NONE" }]
+    },
+
+    "Call": {
+        "inputs": [{ "name": "Call", "type": "NONE" }],
+        "outputs": []
+    },
+
+    "Target Minion": {
+        "inputs": [],
+        "outputs": [{ "name": "Target Minion", "type": "MINION" }]
+    },
+
+    "Integer": {
+        "inputs": [],
+        "outputs": [{ "name": "Value", "type": "INTEGER" }]
+    }
+}
