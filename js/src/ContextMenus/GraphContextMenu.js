@@ -2,7 +2,8 @@ import { ContextMenu, Element } from "./ContextMenu.js";
 import { Environment } from "../Environment.js";
 import { serialize } from "../GraphSerializer.js";
 import { download } from "../Download.js";
-import { Node } from "../node.js";
+import { Node } from "../Node.js";
+import { Macro } from "../Macro.js";
 
 class GraphContextMenu extends ContextMenu {
     static Menu;
@@ -25,29 +26,40 @@ class GraphContextMenu extends ContextMenu {
             )
         );
 
+        this.add_entry(
+            new Element(
+                Environment.p5
+                    .createButton("Add Macro")
+                    .mousePressed(function () {
+                        Environment.graph.add_node(
+                            new Macro(
+                                GraphContextMenu.Menu.x -
+                                    Environment.graph.selectedLayer.x,
+                                GraphContextMenu.Menu.y -
+                                    Environment.graph.selectedLayer.y,
+                                "Macro"
+                            )
+                        );
+                        GraphContextMenu.Menu.hide();
+                    })
+            )
+        );
+
         let sub_menu = new ContextMenu();
 
-        Object.keys(Environment.nodeJson).forEach((node) => {
+        Object.keys(Environment.nodes.nodes).forEach((node) => {
             sub_menu.add_entry(
                 new Element(
                     Environment.p5
                         .createButton(node + " Node")
                         .mousePressed(function () {
-                            console.log(this.x - Environment.graph.x);
-                            var result = new Node(
-                                GraphContextMenu.Menu.x - Environment.graph.x,
-                                GraphContextMenu.Menu.y - Environment.graph.y,
-                                node
-                            );
-                            Environment.nodeJson[node].inputs.forEach(
-                                (input) => {
-                                    result.add_input(input.name, input.type);
-                                }
-                            );
-                            Environment.nodeJson[node].outputs.forEach(
-                                (output) => {
-                                    result.add_output(output.name, output.type);
-                                }
+                            var result = Node.create_node(
+                                GraphContextMenu.Menu.x -
+                                    Environment.graph.selectedLayer.x,
+                                GraphContextMenu.Menu.y -
+                                    Environment.graph.selectedLayer.y,
+                                node,
+                                Environment.nodes.nodes[node]
                             );
 
                             Environment.graph.add_node(result);

@@ -1,5 +1,5 @@
 import { ContextMenu, Element } from "./ContextMenu.js";
-import { TransputType } from "../enums.js";
+import { TransputType } from "../Enums.js";
 import { Environment } from "../Environment.js";
 
 class SocketContextMenu extends ContextMenu {

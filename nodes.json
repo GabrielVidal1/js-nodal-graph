@@ -17,8 +17,36 @@
         "outputs": [{ "name": "Target Minion", "type": "MINION" }]
     },
 
+    "Minion Infos": {
+        "inputs": [{ "name": "Minion", "type": "MINION" }],
+        "outputs": [
+            { "name": "Health", "type": "INTEGER" },
+            { "name": "Attack", "type": "INTEGER" }
+        ]
+    },
+
     "Integer": {
         "inputs": [],
         "outputs": [{ "name": "Value", "type": "INTEGER" }]
+    },
+
+    "Floor": {
+        "inputs": [{ "name": "Value", "type": "FLOAT" }],
+        "outputs": [{ "name": "Int", "type": "INTEGER" }]
+    },
+
+    "Int Operation": {
+        "inputs": [
+            { "name": "A", "type": "INTEGER" },
+            { "name": "B", "type": "INTEGER" }
+        ],
+        "outputs": [{ "name": "Result", "type": "INTEGER" }],
+        "data": [
+            {
+                "name": "type",
+                "type": "DropDownMenu",
+                "values": ["+", "-", "*", "/"]
+            }
+        ]
     }
 }

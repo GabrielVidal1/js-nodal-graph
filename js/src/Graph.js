@@ -2,8 +2,9 @@ import { Environment } from "./Environment.js";
 import { GraphContextMenu } from "./ContextMenus/GraphContextMenu.js";
 import { SocketContextMenu } from "./ContextMenus/SocketContextMenu.js";
 import { NodeContextMenu } from "./ContextMenus/NodeContextMenu.js";
-import { SocketColors } from "./enums.js";
-import { Node } from "./node.js";
+import { Node } from "./Node.js";
+import { Layer } from "./Layer.js";
+import { LayersUI } from "./LayersUI.js";
 
 const GraphState = {
     NONE: 0,
@@ -11,54 +12,66 @@ const GraphState = {
     LOADING: 2,
 };
 
+let nx = 0,
+    ny = 0;
+
 class Graph {
+    static MainLayer;
+
     constructor() {
-        //this.data = data;
+        Graph.MainLayer = new Layer("Main");
+        this.selectedLayer = Graph.MainLayer;
 
-        this.x = 0;
-        this.y = 0;
-
-        this.nodes = [];
-        this.connections = new Map();
-
-        this.nx = 0;
-        this.ny = 0;
+        //LayersUI.Update();
 
         this.selected = null;
 
-        this.context_menu = null;
+        this.layer = this.state = GraphState.NONE;
 
-        this.state = GraphState.NONE;
+        this.canvas = Environment.p5.createCanvas(
+            Environment.width,
+            Environment.height
+        );
 
-        this.canvas = Environment.p5
-            .createCanvas(Environment.width, Environment.height)
+        this.canvas.mousePressed(function () {
+            Environment.graph.mousePressed();
+        });
+        this.canvas.mouseReleased(function () {
+            Environment.graph.mouseReleased();
+        });
 
-            .mousePressed(function () {
-                if (Environment.p5.mouseButton == Environment.p5.LEFT) {
-                    GraphContextMenu.Menu.hide();
-                    SocketContextMenu.Menu.hide();
-                    NodeContextMenu.Menu.hide();
-                }
-            })
-            .dragOver(function () {
-                Environment.graph.state = GraphState.HIGHLIGHT;
-            })
-            .dragLeave(function () {
+        this.canvas.dragOver(function () {
+            Environment.graph.state = GraphState.HIGHLIGHT;
+        });
+        this.canvas.dragLeave(function () {
+            Environment.graph.state = GraphState.NONE;
+        });
+        this.canvas.drop(
+            function (file) {
                 Environment.graph.state = GraphState.NONE;
-            })
-            .drop(
-                function (file) {
-                    Environment.graph.state = GraphState.NONE;
-                    Environment.graph.load_graph(file.data);
-                },
-                function () {
-                    Environment.graph.state = GraphState.LOADING;
-                }
-            );
-
-        console.log(this.canvas.position());
+                Environment.graph.load_graph(file.data);
+            },
+            function () {
+                Environment.graph.state = GraphState.LOADING;
+            }
+        );
 
         this.canvas.position(0, 0);
+    }
+
+    get x() {
+        return this.selectedLayer.x;
+    }
+
+    get y() {
+        return this.selectedLayer.y;
+    }
+
+    open_layer(layer) {
+        layer.previous_layer = this.selectedLayer;
+        this.selectedLayer = layer;
+
+        LayersUI.Update();
     }
 
     load_graph(json) {
@@ -66,9 +79,16 @@ class Graph {
 
         this.nodes = [];
 
+        if ("macros" in json) {
+            Environment.nodes.macros = json.macros;
+        }
+
         json.nodes.forEach((node) => {
             var n = new Node(node.position.x, node.position.y, node.name);
-            var transputs = Environment.nodeJson[node.name];
+            var transputs =
+                node.name in Object.keys(Environment.nodes.nodes)
+                    ? Environment.nodes.nodes[node.name]
+                    : Environment.nodes.macros[node.name];
             transputs.inputs.forEach((input) => {
                 n.add_input(input.name, input.type);
             });
@@ -90,55 +110,27 @@ class Graph {
         });
     }
 
+    //#region Graph Manipulation
+
     add_node(node) {
-        node.graph = this;
-        node.id = this.nodes.length;
-        this.nodes.push(node);
+        this.selectedLayer.add_node(node);
     }
 
     remove_node(node) {
-        let index = this.nodes.indexOf(node);
-        console.log(index);
-        if (index > -1) {
-            node.inputs.forEach((in_socket) =>
-                in_socket.connected_sockets.forEach((out_socket) =>
-                    this.remove_connection(in_socket, out_socket)
-                )
-            );
-            node.outputs.forEach((out_socket) =>
-                out_socket.connected_sockets.forEach((in_socket) =>
-                    this.remove_connection(in_socket, out_socket)
-                )
-            );
-            this.nodes.splice(index, 1);
-        }
+        this.selectedLayer.remove_node(node);
     }
 
     add_connection(socket_in, socket_out) {
-        if (this.connections.has(socket_in))
-            this.remove_connection(socket_in, this.connections.get(socket_in));
-
-        this.connections.set(socket_in, socket_out);
-
-        socket_out.connected_sockets.push(socket_in);
-        socket_in.connected_sockets.push(socket_out);
+        this.selectedLayer.add_connection(socket_in, socket_out);
     }
 
     remove_connection(socket_in, socket_out) {
-        this.connections.delete(socket_in);
-
-        if (socket_out == null) return;
-
-        let index = socket_out.connected_sockets.findIndex(
-            (socket) => socket == socket_in
-        );
-        if (index > -1) socket_out.connected_sockets.splice(index, 1);
-
-        index = socket_in.connected_sockets.findIndex(
-            (socket) => socket == socket_out
-        );
-        if (index > -1) socket_in.connected_sockets.splice(index, 1);
+        this.selectedLayer.remove_connection(socket_in, socket_out);
     }
+
+    //#endregion
+
+    //#region Draw
 
     draw_grid() {
         Environment.p5.push();
@@ -148,14 +140,14 @@ class Graph {
         Environment.p5.stroke(50);
 
         for (
-            var i = this.x % (gridSize / subGridNumber);
+            var i = this.selectedLayer.x % (gridSize / subGridNumber);
             i < Environment.p5.width;
             i += gridSize / subGridNumber
         )
             Environment.p5.line(i, 0, i, Environment.p5.height);
 
         for (
-            var i = this.y % (gridSize / subGridNumber);
+            var i = this.selectedLayer.y % (gridSize / subGridNumber);
             i < Environment.p5.height;
             i += gridSize / subGridNumber
         )
@@ -163,47 +155,19 @@ class Graph {
 
         Environment.p5.stroke(150);
 
-        for (var i = this.x % gridSize; i < Environment.p5.width; i += gridSize)
+        for (
+            var i = this.selectedLayer.x % gridSize;
+            i < Environment.p5.width;
+            i += gridSize
+        )
             Environment.p5.line(i, 0, i, Environment.p5.height);
 
         for (
-            var i = this.y % gridSize;
+            var i = this.selectedLayer.y % gridSize;
             i < Environment.p5.height;
             i += gridSize
         )
             Environment.p5.line(0, i, Environment.p5.width, i);
-        Environment.p5.pop();
-    }
-
-    draw_connections() {
-        Environment.p5.push();
-        Environment.p5.fill(0, 0, 0, 0);
-        this.connections.forEach((socket_in, socket_out, i) => {
-            Environment.p5.stroke(255);
-            Environment.p5.strokeWeight(7);
-            Environment.p5.bezier(
-                socket_in.x,
-                socket_in.y,
-                socket_in.x + 100,
-                socket_in.y,
-                socket_out.x - 100,
-                socket_out.y,
-                socket_out.x,
-                socket_out.y
-            );
-            Environment.p5.stroke(SocketColors[socket_in.type]);
-            Environment.p5.strokeWeight(5);
-            Environment.p5.bezier(
-                socket_in.x,
-                socket_in.y,
-                socket_in.x + 100,
-                socket_in.y,
-                socket_out.x - 100,
-                socket_out.y,
-                socket_out.x,
-                socket_out.y
-            );
-        });
         Environment.p5.pop();
     }
 
@@ -212,11 +176,7 @@ class Graph {
 
         this.draw_grid();
 
-        this.draw_connections();
-
-        this.nodes.forEach((item, i) => {
-            item.draw();
-        });
+        this.selectedLayer.draw();
 
         if (this.state == GraphState.HIGHLIGHT) {
             Environment.p5.push();
@@ -226,8 +186,20 @@ class Graph {
         }
     }
 
+    //#endregion
+
+    //#region Mouse Manipulation
+
     mousePressed() {
-        var res = this.nodes.filter((node, i) => node.contains_mouse());
+        if (Environment.p5.mouseButton == Environment.p5.LEFT) {
+            GraphContextMenu.Menu.hide();
+            SocketContextMenu.Menu.hide();
+            NodeContextMenu.Menu.hide();
+        }
+
+        var res = this.selectedLayer.nodes.filter((node, i) =>
+            node.contains_mouse()
+        );
 
         if (res.length > 0) {
             this.selected = res[0];
@@ -241,8 +213,8 @@ class Graph {
             return;
         }
 
-        this.nx = Environment.p5.mouseX;
-        this.ny = Environment.p5.mouseY;
+        nx = Environment.p5.mouseX;
+        ny = Environment.p5.mouseY;
     }
 
     mouseReleased() {
@@ -261,11 +233,13 @@ class Graph {
             return;
         }
 
-        this.x += Environment.p5.mouseX - this.nx;
-        this.nx = Environment.p5.mouseX;
-        this.y += Environment.p5.mouseY - this.ny;
-        this.ny = Environment.p5.mouseY;
+        this.selectedLayer.x += Environment.p5.mouseX - nx;
+        nx = Environment.p5.mouseX;
+        this.selectedLayer.y += Environment.p5.mouseY - ny;
+        ny = Environment.p5.mouseY;
     }
+
+    //#endregion
 }
 
 export { Graph };

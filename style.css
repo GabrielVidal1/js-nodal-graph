@@ -1,0 +1,72 @@
+.panel {
+    background-color: darkred;
+    width: 100%;
+    height: 100%;
+}
+
+.upfield {
+    background-color: aqua;
+    width: 100%;
+    height: 30px;
+    margin: 5px;
+}
+
+.nameField {
+    background-color: white;
+    margin: 5px;
+
+    width: 80%;
+    float: left;
+}
+
+.cross {
+    float: right;
+    width: 30px;
+    height: 30px;
+}
+
+.parameters {
+    background-color: darksalmon;
+    width: 100%;
+    height: calc(100% - 30px);
+}
+
+.parameterList {
+    background-color: rebeccapurple;
+    float: left;
+    width: calc(50% - 10px);
+    height: calc(100% - 10px);
+    margin: 5px;
+}
+
+.parameterPanel {
+    background-color: cornflowerblue;
+    float: left;
+    margin: 5px;
+    width: calc(50% - 10px);
+    height: calc(100% - 10px);
+}
+
+.paramameterNameField {
+    background-color: cornflowerblue;
+    margin: 5px;
+    width: 50%;
+    height: 15px;
+}
+
+.add_transput_button {
+    background-color: whitesmoke;
+    float: right;
+}
+
+.transput_list {
+    background-color: tomato;
+    width: calc(100% - 10px);
+    margin: 5px;
+}
+
+.transput {
+    background-color: yellow;
+    width: calc(100% - 10px - 20px);
+    margin: 5px;
+}

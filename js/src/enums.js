@@ -15,6 +15,7 @@ const SocketColors = {
     NONE: "#EBDED4",
     MINION: "#e82117",
     INTEGER: "#1d09f6",
+    FLOAT: "#1acb24",
 };
 
 export { TransputType, SocketColors };

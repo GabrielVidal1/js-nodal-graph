@@ -1,11 +1,37 @@
 import { Environment } from "./Environment.js";
 import { NodeContextMenu } from "./ContextMenus/NodeContextMenu.js";
 import { SocketContextMenu } from "./ContextMenus/SocketContextMenu.js";
-import { Socket } from "./socket.js";
-import { TransputType, SocketColors } from "./enums.js";
+import { Socket } from "./Socket.js";
+import { TransputType, SocketColors } from "./Enums.js";
 
 class Node {
     static NodeContextMenu;
+
+    static create_node(x, y, name, node_json) {
+        var result = new Node(x, y, name);
+
+        node_json.inputs.forEach((input) => {
+            result.add_input(input.name, input.type);
+        });
+        node_json.outputs.forEach((output) => {
+            result.add_output(output.name, output.type);
+        });
+        if ("data" in node_json) {
+            node_json.data.forEach((data) => {
+                switch (data.type) {
+                    case "DropDownMenu":
+                        var select = Environment.p5.createSelect();
+                        data.values.forEach((value) => select.option(value));
+                        result.add_data(data.name, select);
+                        break;
+
+                    default:
+                        break;
+                }
+            });
+        }
+        return result;
+    }
 
     constructor(x, y, name) {
         this.x = x;
@@ -16,6 +42,8 @@ class Node {
 
         this.inputs = [];
         this.outputs = [];
+
+        this.data = {};
 
         this.offset = 10;
 
@@ -48,12 +76,20 @@ class Node {
         return this;
     }
 
+    add_data(name, data) {
+        this.data[name] = data;
+    }
+
     contains_mouse() {
         return (
-            Environment.p5.mouseX > this.x + Environment.graph.x &&
-            Environment.p5.mouseX < this.x + Environment.graph.x + this.width &&
-            Environment.p5.mouseY > this.y + Environment.graph.y &&
-            Environment.p5.mouseY < this.y + Environment.graph.y + this.height
+            Environment.p5.mouseX >
+                this.x + Environment.graph.selectedLayer.x &&
+            Environment.p5.mouseX <
+                this.x + Environment.graph.selectedLayer.x + this.width &&
+            Environment.p5.mouseY >
+                this.y + Environment.graph.selectedLayer.y &&
+            Environment.p5.mouseY <
+                this.y + Environment.graph.selectedLayer.y + this.height
         );
     }
 
@@ -61,11 +97,21 @@ class Node {
         this.width =
             10 +
             2 * this.offset +
-            Environment.p5.textWidth(this.name + " Node");
+            this.inputs
+                .concat(this.outputs)
+                .reduce(
+                    (prev, curr) =>
+                        Math.max(prev, Environment.p5.textWidth(prev.name)),
+                    Environment.p5.textWidth(this.name + " Node")
+                );
+
         this.height =
             2 * this.offset +
             (Environment.fontsize + 10) *
-                (1 + this.inputs.length + this.outputs.length);
+                (1 +
+                    this.inputs.length +
+                    this.outputs.length +
+                    Object.keys(this.data).length);
 
         var witdh = this.width - 2 * this.offset;
 
@@ -100,13 +146,14 @@ class Node {
 
         var blockHeight = Environment.fontsize + 10;
 
+        var y =
+            Environment.graph.y +
+            this.y +
+            this.offset +
+            (Environment.fontsize + 10);
+        var x = Environment.graph.x + this.x + this.offset;
+
         this.inputs.forEach((socket, i) => {
-            var x = Environment.graph.x + this.x + this.offset;
-            var y =
-                Environment.graph.y +
-                this.y +
-                this.offset +
-                (i + 1) * (Environment.fontsize + 10);
             Environment.p5.fill(80, 0, 0);
             Environment.p5.rect(x, y, witdh, blockHeight);
             Environment.p5.textAlign(
@@ -116,16 +163,29 @@ class Node {
             Environment.p5.fill(255);
             Environment.p5.text(socket.name, x + 15, y + blockHeight / 2);
             socket.draw(x, y + blockHeight / 2, 15);
+
+            y += blockHeight;
         });
 
-        this.outputs.forEach((socket, i) => {
-            var x = Environment.graph.x + this.x + this.offset;
-            var y =
-                Environment.graph.y +
-                this.y +
-                this.offset +
-                (i + 1 + this.inputs.length) * (Environment.fontsize + 10);
+        for (const [name, data] of Object.entries(this.data)) {
+            Environment.p5.fill(80, 0, 0);
+            Environment.p5.rect(x, y, witdh, blockHeight);
+            Environment.p5.textAlign(
+                Environment.p5.LEFT,
+                Environment.p5.CENTER
+            );
+            Environment.p5.fill(255);
+            Environment.p5.text(name, x + 10, y + blockHeight / 2);
 
+            data.position(x + 10 + Environment.p5.textWidth(name) + 10, y + 3);
+            data.size(
+                witdh - (10 + Environment.p5.textWidth(name) + 10 + 10),
+                blockHeight - 6
+            );
+            y += blockHeight;
+        }
+
+        this.outputs.forEach((socket, i) => {
             Environment.p5.fill(80, 0, 0);
             Environment.p5.rect(x, y, witdh, blockHeight);
             Environment.p5.textAlign(
@@ -143,6 +203,8 @@ class Node {
                 y + blockHeight / 2,
                 15
             );
+
+            y += blockHeight;
         });
 
         if (this.selected != null) {
@@ -208,7 +270,7 @@ class Node {
 
     mouseReleased() {
         if (this.selected != null) {
-            var sockets = Environment.graph.nodes
+            var sockets = Environment.graph.selectedLayer.nodes
                 .filter((node) => node.contains_mouse(p5))
                 .flatMap((node) => node.inputs.concat(node.outputs))
                 .filter((socket) => socket.contains_mouse(p5));

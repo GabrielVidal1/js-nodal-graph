@@ -2,6 +2,8 @@ import { Graph } from "./Graph.js";
 import { SocketContextMenu } from "./ContextMenus/SocketContextMenu.js";
 import { NodeContextMenu } from "./ContextMenus/NodeContextMenu.js";
 import { GraphContextMenu } from "./ContextMenus/GraphContextMenu.js";
+import { MacroUI } from "./MacroUI.js";
+import { LayersUI } from "./LayersUI.js";
 
 export class Environment {
     static width = 800;
@@ -9,7 +11,7 @@ export class Environment {
 
     static fontsize = 15;
 
-    static nodeJson;
+    static nodes;
 
     static p5;
     static graph;
@@ -21,7 +23,10 @@ export class Environment {
 
         p5.preload = function () {
             font = p5.loadFont("../assets/DejaVuSans.ttf");
-            Environment.nodeJson = p5.loadJSON("./nodes.json");
+            Environment.nodes = {
+                nodes: p5.loadJSON("./nodes.json"),
+                macros: {},
+            };
         };
 
         p5.setup = function () {
@@ -33,25 +38,17 @@ export class Environment {
             GraphContextMenu.Menu = new GraphContextMenu();
             NodeContextMenu.Menu = new NodeContextMenu();
             SocketContextMenu.Menu = new SocketContextMenu();
+            MacroUI.ui = new MacroUI();
+
+            LayersUI.Update();
+
+            p5.mouseDragged = function () {
+                Environment.graph.mouseDragged();
+            };
         };
 
         p5.draw = function () {
             Environment.graph.draw();
-        };
-        p5.mousePressed = function () {
-            Environment.graph.mousePressed();
-        };
-        p5.mouseReleased = function () {
-            Environment.graph.mouseReleased();
-        };
-        p5.mouseDragged = function () {
-            Environment.graph.mouseDragged();
-        };
-        p5.mouseOver = function () {
-            Environment.graph.mouseOver();
-        };
-        p5.mouseOut = function () {
-            Environment.graph.mouseOut();
         };
     }
 }

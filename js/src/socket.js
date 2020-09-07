@@ -1,4 +1,4 @@
-import { TransputType, SocketColors } from "./enums.js";
+import { TransputType, SocketColors } from "./Enums.js";
 import { Environment } from "./Environment.js";
 import { SocketContextMenu } from "./ContextMenus/SocketContextMenu.js";
 
@@ -18,6 +18,20 @@ class Socket {
         this.connected_sockets = [];
 
         Socket.SocketContextMenu = new SocketContextMenu();
+    }
+
+    disconnect() {
+        this.connected_sockets.forEach((connected_socket) => {
+            let socket_in =
+                this.transput_type == TransputType.INPUT
+                    ? this
+                    : connected_socket;
+            let socket_out =
+                this.transput_type == TransputType.OUTPUT
+                    ? this
+                    : connected_socket;
+            Environment.graph.remove_connection(socket_in, socket_out);
+        });
     }
 
     set_index(index) {
